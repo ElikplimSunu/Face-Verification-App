@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">FaceVerification App</string>
+    <string name="try_again">Try again</string>
+    <string name="back_button">back button</string>
+</resources>
