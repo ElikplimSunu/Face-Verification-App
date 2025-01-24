@@ -12,6 +12,7 @@ constraintlayout = "2.2.0"
 cameraLifecycle = "1.5.0-alpha05"
 cameraView = "1.5.0-alpha05"
 cameraCamera2 = "1.5.0-alpha05"
+faceDetection = "16.1.7"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -32,6 +33,7 @@ androidx-constraintlayout = { group = "androidx.constraintlayout", name = "const
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "cameraLifecycle" }
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "cameraView" }
 androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "cameraCamera2" }
+face-detection = { group = "com.google.mlkit", name = "face-detection", version.ref = "faceDetection" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
