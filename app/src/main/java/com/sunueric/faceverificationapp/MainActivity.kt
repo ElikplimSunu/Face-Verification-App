@@ -1,3 +1,5 @@
+package com.sunueric.faceverificationapp
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -51,6 +53,7 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableIntStateOf
 
 class FaceVerificationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -100,16 +103,19 @@ fun FaceVerificationScreen() {
 
     val faceDetector = remember { FaceDetection.getClient(faceDetectorOptions) }
     //Get the width and height of the cameraPreview;
-    var cameraPreviewWidth by remember { mutableStateOf(640) }
-    var cameraPreviewHeight by remember { mutableStateOf(480) }
+    val screenMetrics = context.resources.displayMetrics
+    var cameraPreviewWidth by remember {
+        mutableIntStateOf(screenMetrics.widthPixels)
+    }
+    var cameraPreviewHeight by remember {
+        mutableIntStateOf(screenMetrics.heightPixels)
+    }
     val screenWidth = context.resources.displayMetrics.widthPixels.toFloat()
     val screenHeight = context.resources.displayMetrics.heightPixels.toFloat()
     // Function to process faces and update state
     fun processFaces(faces: List<Face>) {
         if (faces.isNotEmpty()) {
             val face = faces.first()
-            val ovalWidth = 0.55f
-            val ovalHeight = 0.4f
 
             // Calculate the oval's bounding box based on the current view size
             fun calculateOvalBoundingBox(previewWidth: Int, previewHeight: Int): FaceVerificationUtils.OvalBoundingBox {
@@ -425,24 +431,20 @@ object FaceVerificationUtils {
     ): Boolean {
         val faceBox = face.boundingBox
 
-
-        // Correct scaling factors for mapping preview coordinates to screen coordinates
+        // Correct scaling based on preview size instead of screen size
         val scaleX = previewWidth.toFloat() / screenWidth
         val scaleY = previewHeight.toFloat() / screenHeight
 
-        val scaledLeft = faceBox.left * scaleX
-        val scaledTop = faceBox.top * scaleY
-        val scaledRight = faceBox.right * scaleX
-        val scaledBottom = faceBox.bottom * scaleY
+        val scaledLeft = faceBox.left / scaleX
+        val scaledTop = faceBox.top / scaleY
+        val scaledRight = faceBox.right / scaleX
+        val scaledBottom = faceBox.bottom / scaleY
 
         Log.d("ScaledFaceBox", "Left=$scaledLeft, Top=$scaledTop, Right=$scaledRight, Bottom=$scaledBottom")
 
-        // Check if the scaled face box is within the oval bounds
-        val isInside = scaledLeft >= ovalBoundingBox.left &&
+        return scaledLeft >= ovalBoundingBox.left &&
                 scaledRight <= (ovalBoundingBox.left + ovalBoundingBox.width) &&
                 scaledTop >= ovalBoundingBox.top &&
                 scaledBottom <= (ovalBoundingBox.top + ovalBoundingBox.height)
-
-        return isInside
     }
 }
