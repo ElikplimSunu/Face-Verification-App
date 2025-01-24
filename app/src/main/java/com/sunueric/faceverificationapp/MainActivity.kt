@@ -51,7 +51,7 @@ class FaceVerificationActivity : ComponentActivity() {
     }
 }
 
-enum class VerificationState { INITIAL, STARTED, SUCCESS, FAILED }
+enum class VerificationState { INITIAL, STARTED, VERIFYING, SUCCESS, FAILED }
 
 
 @Composable
@@ -60,6 +60,8 @@ fun FaceVerificationScreen() {
     var verificationState by remember { mutableStateOf(VerificationState.INITIAL) }
     var borderColor by remember { mutableStateOf(Color.White) }
     val context = LocalContext.current
+    var currentDirection by remember { mutableStateOf(LookDirection.STRAIGHT) }
+
 
     // Camera permission handling
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -97,20 +99,64 @@ fun FaceVerificationScreen() {
                 blendMode = BlendMode.Clear
             )
 
-            // Draw border
-            drawOval(
-                color = borderColor,
-                topLeft = ovalTopLeft,
-                size = ovalSize,
-                style = Stroke(width = 8.dp.toPx())
-            )
+            // Draw border based on current direction
+            when (currentDirection) {
+                LookDirection.STRAIGHT -> drawOval(
+                    color = borderColor,
+                    topLeft = ovalTopLeft,
+                    size = ovalSize,
+                    style = Stroke(width = 8.dp.toPx())
+                )
+                LookDirection.RIGHT -> drawArc(
+                    color = borderColor,
+                    startAngle = -90f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    topLeft = ovalTopLeft,
+                    size = ovalSize,
+                    style = Stroke(width = 8.dp.toPx())
+                )
+                LookDirection.LEFT -> drawArc(
+                    color = borderColor,
+                    startAngle = 90f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    topLeft = ovalTopLeft,
+                    size = ovalSize,
+                    style = Stroke(width = 8.dp.toPx())
+                )
+                LookDirection.UP -> drawArc(
+                    color = borderColor,
+                    startAngle = 180f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    topLeft = ovalTopLeft,
+                    size = ovalSize,
+                    style = Stroke(width = 8.dp.toPx())
+                )
+                LookDirection.DOWN -> drawArc(
+                    color = borderColor,
+                    startAngle = 0f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    topLeft = ovalTopLeft,
+                    size = ovalSize,
+                    style = Stroke(width = 8.dp.toPx())
+                )
+            }
         }
 
-        // Add inside Box after Canvas
+        // Text displays for different states
         when (verificationState) {
-            VerificationState.STARTED -> {
+            VerificationState.STARTED, VerificationState.VERIFYING -> {
                 Text(
-                    text = "Position your face in the oval",
+                    text = when (currentDirection) {
+                        LookDirection.STRAIGHT -> "Look straight ahead"
+                        LookDirection.RIGHT -> "Look to your right"
+                        LookDirection.LEFT -> "Look to your left"
+                        LookDirection.UP -> "Look up"
+                        LookDirection.DOWN -> "Look down"
+                    },
                     modifier = Modifier.align(Alignment.TopCenter).padding(16.dp),
                     color = Color.White
                 )
@@ -136,6 +182,7 @@ fun FaceVerificationScreen() {
                         onClick = {
                             verificationState = VerificationState.INITIAL
                             borderColor = Color.White
+                            currentDirection = LookDirection.STRAIGHT
                         }
                     ) {
                         Text("Try Again")
@@ -147,21 +194,31 @@ fun FaceVerificationScreen() {
 
         var isLoading by remember { mutableStateOf(false) }
 
-// Update button click handler
         Button(
             modifier = Modifier.align(Alignment.BottomCenter).padding(24.dp),
             onClick = {
-                if (!isLoading && verificationState != VerificationState.STARTED) {
+                if (!isLoading && verificationState == VerificationState.INITIAL) {
                     verificationState = VerificationState.STARTED
                     borderColor = Color.White
+                    currentDirection = LookDirection.STRAIGHT
                     coroutineScope.launch {
                         isLoading = true
-                        startVerification { success ->
-                            borderColor = if (success) Color.Green else Color.Red
-                            verificationState = if (success) VerificationState.SUCCESS
-                            else VerificationState.FAILED
-                            isLoading = false
-                        }
+                        startVerification(
+                            onDirectionChange = { direction ->
+                                currentDirection = direction
+                                verificationState = VerificationState.VERIFYING
+                                borderColor = Color.White
+                            },
+                            onDirectionSuccess = {
+                                borderColor = Color.Green
+                            },
+                            onComplete = { success ->
+                                verificationState = if (success) VerificationState.SUCCESS else VerificationState.FAILED
+                                borderColor = if (success) Color.Green else Color.Red
+                                currentDirection = LookDirection.STRAIGHT
+                                isLoading = false
+                            }
+                        )
                     }
                 }
             }
@@ -203,9 +260,33 @@ fun FullScreenCameraView() {
     )
 }
 
-// Simulated verification process
-suspend fun startVerification(callback: (Boolean) -> Unit) {
-    delay(2000) // Simulate processing time
-    callback(Random.nextBoolean()) // Replace with actual verification logic
+enum class LookDirection { STRAIGHT, RIGHT, LEFT, UP, DOWN }
+
+
+suspend fun startVerification(
+    onDirectionChange: (LookDirection) -> Unit,
+    onDirectionSuccess: () -> Unit,
+    onComplete: (Boolean) -> Unit
+) {
+    val directions = LookDirection.entries.shuffled()
+    var success = true
+
+    for (direction in directions) {
+        onDirectionChange(direction)
+        delay(2000) // Simulate verification time for each direction
+
+        // Simulate a random success/failure for each direction
+        if (Random.nextFloat() > 0.2f) {
+            onDirectionSuccess()
+            delay(500) // Show green border for a short time
+        } else {
+            success = false
+            break
+        }
+    }
+
+    onComplete(success)
 }
+
+
 
